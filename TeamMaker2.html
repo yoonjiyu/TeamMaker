@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>내전 팀 짜기</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    textarea, input, button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .team {
+      background: white;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h2>내전 팀 짜기</h2>
+
+  <label for="people">이름(사용자 가치)를 줄별로 입력해주세요 (예: 홍길동 5 또는 홍길동)</label>
+  <textarea id="people" rows="10" placeholder="홍길동 5
+길동 3
+지은"></textarea>
+
+  <label for="teamCount">몇 팀으로 나누기:</label>
+  <input type="number" id="teamCount" min="1" placeholder="예: 3">
+
+  <button onclick="makeTeams()">랜덤 팀 나누기!</button>
+  <button onclick="rerunTeams()">다시 생성하기</button>
+
+  <div id="result"></div>
+
+  <script>
+    let currentPlayers = [];
+    let currentTeamCount = 0;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function parsePlayers(rawInput) {
+      const lines = rawInput.split("\n");
+      const players = [];
+      lines.forEach(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 1) {
+          const value = parseInt(parts[parts.length - 1]);
+          const hasValue = !isNaN(value);
+          const name = hasValue ? parts.slice(0, -1).join(" ") : parts.join(" ");
+          players.push({ name, value: hasValue ? value : 0 });
+        }
+      });
+      return players;
+    }
+
+    function balanceTeams(players, numTeams) {
+      const teams = Array.from({ length: numTeams }, () => ({ members: [], total: 0 }));
+
+      const sorted = [...players].sort((a, b) => b.value - a.value); // 가치 높은 순 정렬
+
+      sorted.forEach(player => {
+        // 인원 수가 가장 적은 팀들 중, 총 가치가 낮은 팀에 배정
+        teams.sort((a, b) => {
+          if (a.members.length !== b.members.length) {
+            return a.members.length - b.members.length;
+          }
+          return a.total - b.total;
+        });
+
+        teams[0].members.push(player);
+        teams[0].total += player.value;
+      });
+
+      return teams;
+    }
+
+    function displayTeams(teams) {
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "<h3>--- 팀 배정 결과 ---</h3>";
+      teams.forEach((team, idx) => {
+        const div = document.createElement("div");
+        div.className = "team";
+        div.innerHTML = `<strong>${idx + 1}팀 (전체값: ${team.total}):</strong> ` +
+          team.members.map(m => m.name).join(", ");
+        resultDiv.appendChild(div);
+      });
+    }
+
+    function makeTeams() {
+      const rawNames = document.getElementById("people").value.trim();
+      const teamCount = parseInt(document.getElementById("teamCount").value);
+
+      if (!rawNames || isNaN(teamCount) || teamCount <= 0) {
+        alert("이름과 팀수를 제대로 입력해주세요!");
+        return;
+      }
+
+      const players = parsePlayers(rawNames);
+
+      if (players.length < teamCount) {
+        alert("팀 수가 인원 수보다 많아요!");
+        return;
+      }
+
+      currentPlayers = players.slice();
+      currentTeamCount = teamCount;
+      const teams = balanceTeams(currentPlayers, currentTeamCount);
+      displayTeams(teams);
+    }
+
+    function rerunTeams() {
+      if (currentPlayers.length === 0 || currentTeamCount === 0) {
+        alert("먼저 '랜덤 팀 나누기'를 해주세요!");
+        return;
+      }
+      const shuffled = [...currentPlayers];
+      shuffle(shuffled);
+      const teams = balanceTeams(shuffled, currentTeamCount);
+      displayTeams(teams);
+    }
+  </script>
+</body>
+</html>
